@@ -1,0 +1,76 @@
+/* Container for each image */
+.image-container {
+  position: relative;
+  overflow: hidden; /* Hide any overflow when scaling */
+  margin: 0; /* Remove internal margins if you're using grid gap */
+  border-radius: 20rem;
+  transition: transform 0.1s ease; /* Smooth scaling transition */
+}
+
+/* Scale the container on hover */
+.image-container:hover {
+  transform: scale(1.4); /* Increase the container size by 10% */
+  z-index: 10; /* Bring it above neighboring items */
+}
+
+/* The image styling uses a custom property for dynamic sizing */
+.gallery-image {
+  width: var(--img-size, 200px); /* Use CSS variable, with fallback */
+  height: var(--img-size, 200px);
+  object-fit: cover;
+  display: block;
+  border-radius: 20rem;
+  /* Remove any individual transform on the image so that the container's transform takes effect */
+}
+
+.year-filter {
+  width: 60%;
+}
+
+.checkbox-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.filters {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+/* Image info overlay (hidden by default) */
+.image-info {
+  position: absolute;
+  top: 0; /* Start at the top */
+  right: 0;
+  bottom: 0; /* Extend to the bottom */
+  left: 0; /* Extend to the left */
+  background-color: rgba(0, 0, 0, 0.7); /* semi-transparent black background */
+  color: #fff;
+  font-size: calc(
+    var(--img-size, 200px) / 15
+  ); /* dynamic font size: 10% of image size */
+  padding: 10px;
+  text-align: center;
+
+  /* Using flexbox to center the text vertically and horizontally */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0.6rem;
+
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  pointer-events: none; /* So the overlay doesn't block hover events */
+}
+
+.image-info p {
+  margin: 2px 0; /* Adjust top and bottom margins */
+  line-height: 1rem; /* Keep text compact */
+}
+
+/* When hovering over the container, show the info overlay */
+.image-container:hover .image-info {
+  opacity: 1;
+}
