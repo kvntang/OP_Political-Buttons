@@ -7,12 +7,17 @@ import "./ImageGallery.css"; // Import the CSS file for additional styling
 export default function ImageGallery() {
   const [images, setImages] = useState([]);
   const [yearRange, setYearRange] = useState([1940, 2000]); // Default range for year filtering
-  const [imageSize, setImageSize] = useState(200); // Default displayed image size in pixels
+  const [imageSize, setImageSize] = useState(100); // Default displayed image size in pixels
   const [apiUrl, setApiUrl] = useState(""); // For debugging
 
   // Checkbox filters for image type
   const [showPolitical, setShowPolitical] = useState(true);
   const [showOther, setShowOther] = useState(true);
+
+  // New: Color filter and tolerance states
+  // Initialize with a valid hex color to avoid errors.
+  const [selectedColor, setSelectedColor] = useState("#000000");
+  const [tolerance, setTolerance] = useState(10); // Hue tolerance in degrees
 
   // Fetch images from the backend
   const fetchImages = async () => {
@@ -21,19 +26,22 @@ export default function ImageGallery() {
       let url = `http://127.0.0.1:8000/images?min_date=${yearRange[0]}&max_date=${yearRange[1]}`;
 
       // Determine the type filter:
-      // If both checkboxes are checked, then do not add any type filter.
       if (!(showPolitical && showOther)) {
         if (showPolitical && !showOther) {
           url += "&type=political-campaigns";
         } else if (!showPolitical && showOther) {
           url += "&type=other";
         }
-        // If neither is checked, you might choose to show none or default to showing all.
-        // For now, we'll default to showing all images if neither is checked.
       }
 
-      setApiUrl(url); // For debugging purposes
+      // Append color filter if a color is selected.
+      if (selectedColor) {
+        url += `&color=${encodeURIComponent(
+          selectedColor
+        )}&hue_tolerance=${tolerance}`;
+      }
 
+      setApiUrl(url); // Set the URL for debugging purposes
       const response = await axios.get(url);
       setImages(response.data);
     } catch (error) {
@@ -44,7 +52,7 @@ export default function ImageGallery() {
   // Fetch images when the component mounts or when any filter changes
   useEffect(() => {
     fetchImages();
-  }, [yearRange, showPolitical, showOther]);
+  }, [yearRange, showPolitical, showOther, selectedColor, tolerance]);
 
   return (
     <div>
@@ -65,9 +73,8 @@ export default function ImageGallery() {
           />
         </div>
 
-        {/* Type Filter Checkboxes */}
+        {/* Type Filter Checkboxes and Grid Size Slider */}
         <div className="checkbox-filters">
-          {/* Image size slider */}
           <div style={{ width: "100%" }}>
             <small>Grid size:</small>
             <Slider
@@ -95,9 +102,61 @@ export default function ImageGallery() {
             <small>Everything Else</small>
           </label>
         </div>
+
+        {/* New: Color Picker and Tolerance Slider */}
+        <div
+          className="color-picker-container"
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+        >
+          <div
+            className="color-picker-input"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <label htmlFor="colorPicker">
+              <small>Select Color:</small>
+            </label>
+            <input
+              id="colorPicker"
+              type="color"
+              value={selectedColor}
+              onChange={(e) => setSelectedColor(e.target.value)}
+              style={{
+                width: "2rem",
+                height: "2rem",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                backgroundColor: "transparent",
+              }}
+            />
+          </div>
+          <div
+            className="tolerance-slider-container"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <label htmlFor="toleranceSlider">
+              <small>Hue Tolerance:</small>
+            </label>
+            <Slider
+              id="toleranceSlider"
+              min={0}
+              max={50}
+              step={1}
+              value={tolerance}
+              onChange={(value) => setTolerance(value)}
+              style={{ width: "150px" }}
+            />
+            <small>{tolerance}°</small>
+          </div>
+        </div>
       </div>
 
-      {/* Debug text showing the current API URL (optional) */}
+      {/* Debug Section: Displaying the full query URL */}
+      <div className="debug" style={{ margin: "1rem 0", color: "white" }}>
+        <small>API Query: {apiUrl}</small>
+      </div>
+
+      {/* Debug text showing the number of images found */}
       <small style={{ color: "white" }}>{images.length} images found</small>
 
       {/* Image Gallery */}
@@ -114,7 +173,7 @@ export default function ImageGallery() {
             <div
               key={img.id}
               className="image-container"
-              style={{ "--img-size": `${imageSize}px` }} // set the custom property for dynamic sizing
+              style={{ "--img-size": `${imageSize}px` }} // Set the custom property for dynamic sizing
             >
               {img.image_url ? (
                 <img
@@ -135,7 +194,6 @@ export default function ImageGallery() {
                 <p>
                   {img.date}, {img.dimension}
                 </p>
-                {/* <p>Type: {img.type}</p> */}
               </div>
             </div>
           ))
