@@ -1,5 +1,7 @@
 /* Container for each image */
 .image-container {
+  display: flex;
+  justify-content: center;
   position: relative;
   overflow: hidden; /* Hide any overflow when scaling */
   margin: 0; /* Remove internal margins if you're using grid gap */
@@ -7,10 +9,10 @@
   transition: transform 0.1s ease; /* Smooth scaling transition */
 }
 
-/* Scale the container on hover */
+/* Nonlinear scaling: smaller image yields larger scaling */
 .image-container:hover {
-  transform: scale(1.4); /* Increase the container size by 10% */
-  z-index: 10; /* Bring it above neighboring items */
+  transform: scale(calc(1 + (200 / var(--img-num)) * 0.2));
+  z-index: 10;
 }
 
 /* The image styling uses a custom property for dynamic sizing */
@@ -63,6 +65,7 @@
   opacity: 0;
   transition: opacity 0.1s ease;
   pointer-events: none; /* So the overlay doesn't block hover events */
+  border-radius: 30rem;
 }
 
 .image-info p {

@@ -173,7 +173,10 @@ export default function ImageGallery() {
             <div
               key={img.id}
               className="image-container"
-              style={{ "--img-size": `${imageSize}px` }} // Set the custom property for dynamic sizing
+              style={{
+                "--img-size": `${imageSize}px`, // for layout purposes
+                "--img-num": imageSize, // unitless numeric value
+              }}
             >
               {img.image_url ? (
                 <img
