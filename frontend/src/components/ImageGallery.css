@@ -46,7 +46,7 @@
   right: 0;
   bottom: 0; /* Extend to the bottom */
   left: 0; /* Extend to the left */
-  background-color: rgba(0, 0, 0, 0.7); /* semi-transparent black background */
+  background-color: rgba(0, 0, 0, 0.5); /* semi-transparent black background */
   color: #fff;
   font-size: calc(
     var(--img-size, 200px) / 15
