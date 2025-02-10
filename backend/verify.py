@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect("images.db")
+conn = sqlite3.connect("backend/images.db")
 cursor = conn.cursor()
 
 # Fetch all images, showing NULL values

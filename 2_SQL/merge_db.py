@@ -1,8 +1,8 @@
 import sqlite3
 
 # Paths to old and new databases
-MAIN_DB = "images.db"
-NEW_DB = "new_images.db"
+MAIN_DB = "../backend/images.db"
+NEW_DB = "../backend/new_images.db"
 
 # Connect to both databases
 main_conn = sqlite3.connect(MAIN_DB)

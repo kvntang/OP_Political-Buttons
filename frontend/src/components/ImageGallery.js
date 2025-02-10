@@ -18,12 +18,16 @@ export default function ImageGallery() {
   // Initialize with a valid hex color to avoid errors.
   const [selectedColor, setSelectedColor] = useState("#000000");
   const [tolerance, setTolerance] = useState(10); // Hue tolerance in degrees
+  const [applyColorFilter, setApplyColorFilter] = useState(false);
+
+  // New: Toggle for applying the date (timeline) filter
+  const [applyDateFilter, setApplyDateFilter] = useState(true);
 
   // Fetch images from the backend
   const fetchImages = async () => {
     try {
-      // Start constructing the URL with the date range filter
-      let url = `http://127.0.0.1:8000/images?min_date=${yearRange[0]}&max_date=${yearRange[1]}`;
+      // Start constructing the URL with the date filter toggle and date range
+      let url = `http://127.0.0.1:8000/images?apply_date=${applyDateFilter}&min_date=${yearRange[0]}&max_date=${yearRange[1]}`;
 
       // Determine the type filter:
       if (!(showPolitical && showOther)) {
@@ -34,8 +38,8 @@ export default function ImageGallery() {
         }
       }
 
-      // Append color filter if a color is selected.
-      if (selectedColor) {
+      // Append color filter if it is enabled and a color is selected.
+      if (applyColorFilter && selectedColor) {
         url += `&color=${encodeURIComponent(
           selectedColor
         )}&hue_tolerance=${tolerance}`;
@@ -52,13 +56,21 @@ export default function ImageGallery() {
   // Fetch images when the component mounts or when any filter changes
   useEffect(() => {
     fetchImages();
-  }, [yearRange, showPolitical, showOther, selectedColor, tolerance]);
+  }, [
+    yearRange,
+    showPolitical,
+    showOther,
+    applyColorFilter,
+    selectedColor,
+    tolerance,
+    applyDateFilter,
+  ]);
 
   return (
     <div>
       {/* Filters Section */}
       <div className="filters">
-        {/* Year range slider */}
+        {/* Year range slider and Timeline Filter Toggle */}
         <div className="year-filter">
           <p>
             from {yearRange[0]} to {yearRange[1]}
@@ -71,6 +83,17 @@ export default function ImageGallery() {
             value={yearRange}
             onChange={(range) => setYearRange(range)}
           />
+          {/* New: Toggle for applying the timeline/date filter */}
+          <label
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <input
+              type="checkbox"
+              checked={applyDateFilter}
+              onChange={(e) => setApplyDateFilter(e.target.checked)}
+            />
+            <small>Apply Timeline Filter</small>
+          </label>
         </div>
 
         {/* Type Filter Checkboxes and Grid Size Slider */}
@@ -103,51 +126,65 @@ export default function ImageGallery() {
           </label>
         </div>
 
-        {/* New: Color Picker and Tolerance Slider */}
+        {/* Color Filter Toggle, Color Picker and Tolerance Slider */}
         <div
           className="color-picker-container"
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
         >
-          <div
-            className="color-picker-input"
+          <label
             style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
           >
-            <label htmlFor="colorPicker">
-              <small>Select Color:</small>
-            </label>
             <input
-              id="colorPicker"
-              type="color"
-              value={selectedColor}
-              onChange={(e) => setSelectedColor(e.target.value)}
-              style={{
-                width: "2rem",
-                height: "2rem",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                backgroundColor: "transparent",
-              }}
+              type="checkbox"
+              checked={applyColorFilter}
+              onChange={(e) => setApplyColorFilter(e.target.checked)}
             />
-          </div>
-          <div
-            className="tolerance-slider-container"
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-          >
-            <label htmlFor="toleranceSlider">
-              <small>Hue Tolerance:</small>
-            </label>
-            <Slider
-              id="toleranceSlider"
-              min={0}
-              max={50}
-              step={1}
-              value={tolerance}
-              onChange={(value) => setTolerance(value)}
-              style={{ width: "150px" }}
-            />
-            <small>{tolerance}°</small>
-          </div>
+            <small>Apply Color Filter</small>
+          </label>
+          {applyColorFilter && (
+            <>
+              <div
+                className="color-picker-input"
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <label htmlFor="colorPicker">
+                  <small>Select Color:</small>
+                </label>
+                <input
+                  id="colorPicker"
+                  type="color"
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  style={{
+                    width: "2rem",
+                    height: "2rem",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    backgroundColor: "transparent",
+                  }}
+                />
+              </div>
+              <div
+                className="tolerance-slider-container"
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <label htmlFor="toleranceSlider">
+                  <small>Hue Tolerance:</small>
+                </label>
+                <Slider
+                  id="toleranceSlider"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={tolerance}
+                  onChange={(value) => setTolerance(value)}
+                  style={{ width: "150px" }}
+                />
+                <small>{tolerance}°</small>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -174,8 +211,8 @@ export default function ImageGallery() {
               key={img.id}
               className="image-container"
               style={{
-                "--img-size": `${imageSize}px`, // for layout purposes
-                "--img-num": imageSize, // unitless numeric value
+                "--img-size": `${imageSize}px`, // For layout purposes
+                "--img-num": imageSize, // Unitless numeric value for scaling calculations
               }}
             >
               {img.image_url ? (

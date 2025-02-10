@@ -28,7 +28,7 @@ def extract_metadata(text):
     return filename
 
 # Define the folder to save images
-save_path = os.path.expanduser("~/Desktop/Harvard_Political_Buttons")
+save_path = os.path.expanduser("~/Desktop/Harvard_Political_Buttons_round_2")
 os.makedirs(save_path, exist_ok=True)
 
 # Setup Chrome options
@@ -45,7 +45,7 @@ base_url = "https://curiosity.lib.harvard.edu"
 search_url_template = "https://curiosity.lib.harvard.edu/political-buttons/catalog?page={}&per_page=96&search_field=all_fields"
 
 # Loop through all 30 pages
-for page_num in range(6, 31):  # Adjust the range if necessary
+for page_num in range(16, 31):  # Adjust the range if necessary
     search_results_url = search_url_template.format(page_num)
     print(f"\n📄 Scraping page {page_num}: {search_results_url}")
     

@@ -58,10 +58,10 @@ def hex_to_hsl(hex_str: str):
     return (h * 360, s, l)
 
 @app.get("/images")
-@app.get("/images")
 def get_images(
     min_date: int = Query(None, description="Minimum date (e.g., 1940)"),
     max_date: int = Query(None, description="Maximum date (e.g., 2000)"),
+    apply_date: bool = Query(True, description="Whether to apply the date filter"),
     type: str = Query(
         None,
         description="Filter by image type. Use 'political-campaigns' to show only political campaigns, 'other' to show everything else."
@@ -76,16 +76,17 @@ def get_images(
     query = "SELECT * FROM images WHERE 1=1"
     params = []
 
-    # Date range filtering
-    if min_date and max_date:
-        query += " AND date BETWEEN ? AND ?"
-        params.extend([min_date, max_date])
-    elif min_date:
-        query += " AND date >= ?"
-        params.append(min_date)
-    elif max_date:
-        query += " AND date <= ?"
-        params.append(max_date)
+    # Date range filtering: only apply if apply_date is True
+    if apply_date:
+        if min_date and max_date:
+            query += " AND date BETWEEN ? AND ?"
+            params.extend([min_date, max_date])
+        elif min_date:
+            query += " AND date >= ?"
+            params.append(min_date)
+        elif max_date:
+            query += " AND date <= ?"
+            params.append(max_date)
 
     # Type filtering
     if type:
@@ -106,9 +107,13 @@ def get_images(
     # Construct image list
     image_list = []
     for img in images:
+        title_val = img["title"] if img["title"] is not None else "na"
+        date_val = img["date"] if img["date"] is not None else "na"
+        type_val = img["type"] if img["type"] is not None else "na"
         dimension_val = img["dimension"] if img["dimension"] is not None else "na"
-        filename = f"{img['title']}_{img['date']}_{img['type']}_{dimension_val}.jpg".replace(" ", "-")
+        filename = f"{title_val}_{date_val}_{type_val}_{dimension_val}.jpg".replace(" ", "-")
         image_path = os.path.join(IMAGE_FOLDER, filename)
+
 
         if os.path.exists(image_path):
             image_url = f"http://127.0.0.1:8000/image/{filename}"
@@ -125,7 +130,7 @@ def get_images(
             "image_url": image_url
         })
 
-# Hue filtering: if a color is provided, filter images by comparing hue difference.
+    # Hue filtering: if a color is provided, filter images by comparing hue difference.
     if color:
         # Normalize the color so it always starts with a single "#"
         color = "#" + color.lstrip("#")
@@ -149,14 +154,11 @@ def get_images(
                         filtered_list.append(img)
             image_list = filtered_list
 
-
     return image_list
-
 
 @app.get("/image/{filename}")
 def get_image(filename: str):
     image_path = os.path.join(IMAGE_FOLDER, filename)
-    
     if os.path.exists(image_path):
         return FileResponse(image_path)
     else:
