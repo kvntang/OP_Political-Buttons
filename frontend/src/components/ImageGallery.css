@@ -48,11 +48,9 @@
   right: 0;
   bottom: 0; /* Extend to the bottom */
   left: 0; /* Extend to the left */
-  background-color: rgba(0, 0, 0, 0.5); /* semi-transparent black background */
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
   color: #fff;
-  font-size: calc(
-    var(--img-size, 200px) / 15
-  ); /* dynamic font size: 10% of image size */
+  font-size: calc(var(--img-size, 200px) / 15); /* Dynamic font size */
   padding: 10px;
   text-align: center;
 

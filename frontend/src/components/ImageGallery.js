@@ -2,31 +2,36 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
-import "./ImageGallery.css"; // Import the CSS file for additional styling
+import "./ImageGallery.css"; // Your CSS file
 
 export default function ImageGallery() {
   const [images, setImages] = useState([]);
-  const [yearRange, setYearRange] = useState([1940, 2000]); // Default range for year filtering
-  const [imageSize, setImageSize] = useState(100); // Default displayed image size in pixels
+  const [yearRange, setYearRange] = useState([1940, 2000]); // Default year range
+  const [imageSize, setImageSize] = useState(100); // Default grid image size (px)
   const [apiUrl, setApiUrl] = useState(""); // For debugging
 
   // Checkbox filters for image type
   const [showPolitical, setShowPolitical] = useState(true);
   const [showOther, setShowOther] = useState(true);
 
-  // New: Color filter and tolerance states
-  // Initialize with a valid hex color to avoid errors.
+  // Color filter and tolerance states
   const [selectedColor, setSelectedColor] = useState("#000000");
   const [tolerance, setTolerance] = useState(10); // Hue tolerance in degrees
   const [applyColorFilter, setApplyColorFilter] = useState(false);
 
-  // New: Toggle for applying the date (timeline) filter
+  // Toggle for applying the date (timeline) filter
   const [applyDateFilter, setApplyDateFilter] = useState(true);
+
+  // Toggle for Real-Life Size View
+  const [realLifeSizeView, setRealLifeSizeView] = useState(false);
+
+  // Scale factor for Real-Life Size View (pixels per cm)
+  const [realLifeScale, setRealLifeScale] = useState(100);
 
   // Fetch images from the backend
   const fetchImages = async () => {
     try {
-      // Start constructing the URL with the date filter toggle and date range
+      // Construct URL with date filter toggle and date range
       let url = `http://127.0.0.1:8000/images?apply_date=${applyDateFilter}&min_date=${yearRange[0]}&max_date=${yearRange[1]}`;
 
       // Determine the type filter:
@@ -38,14 +43,14 @@ export default function ImageGallery() {
         }
       }
 
-      // Append color filter if it is enabled and a color is selected.
+      // Append color filter if enabled and a color is selected.
       if (applyColorFilter && selectedColor) {
         url += `&color=${encodeURIComponent(
           selectedColor
         )}&hue_tolerance=${tolerance}`;
       }
 
-      setApiUrl(url); // Set the URL for debugging purposes
+      setApiUrl(url); // For debugging purposes
       const response = await axios.get(url);
       setImages(response.data);
     } catch (error) {
@@ -53,7 +58,7 @@ export default function ImageGallery() {
     }
   };
 
-  // Fetch images when the component mounts or when any filter changes
+  // Fetch images when filters change
   useEffect(() => {
     fetchImages();
   }, [
@@ -66,11 +71,19 @@ export default function ImageGallery() {
     applyDateFilter,
   ]);
 
+  // Utility to extract the numeric value from a dimension string (e.g., "2.3cm")
+  // If the dimension is "na" (or missing), fallback to imageSize.
+  const getDimensionInPixels = (dimensionStr) => {
+    if (!dimensionStr || dimensionStr.toLowerCase() === "na") return imageSize;
+    const num = parseFloat(dimensionStr.replace("cm", "").trim());
+    return isNaN(num) ? imageSize : num * realLifeScale;
+  };
+
   return (
     <div>
       {/* Filters Section */}
       <div className="filters">
-        {/* Year range slider and Timeline Filter Toggle */}
+        {/* Year Range Filter */}
         <div className="year-filter">
           <p>
             from {yearRange[0]} to {yearRange[1]}
@@ -83,7 +96,6 @@ export default function ImageGallery() {
             value={yearRange}
             onChange={(range) => setYearRange(range)}
           />
-          {/* New: Toggle for applying the timeline/date filter */}
           <label
             style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
           >
@@ -96,18 +108,34 @@ export default function ImageGallery() {
           </label>
         </div>
 
-        {/* Type Filter Checkboxes and Grid Size Slider */}
+        {/* Checkboxes and Sliders */}
         <div className="checkbox-filters">
-          <div style={{ width: "100%" }}>
-            <small>Grid size:</small>
-            <Slider
-              min={100}
-              max={400}
-              step={10}
-              value={imageSize}
-              onChange={(value) => setImageSize(value)}
-            />
-          </div>
+          {/* Show grid size slider when NOT in Real-Life Size View */}
+          {!realLifeSizeView && (
+            <div style={{ width: "100%" }}>
+              <small>Grid size:</small>
+              <Slider
+                min={100}
+                max={400}
+                step={10}
+                value={imageSize}
+                onChange={(value) => setImageSize(value)}
+              />
+            </div>
+          )}
+          {/* Show real-life scale slider when in Real-Life Size View */}
+          {realLifeSizeView && (
+            <div style={{ width: "100%" }}>
+              <small>Real Life Scale (px per cm):</small>
+              <Slider
+                min={10}
+                max={50}
+                step={5}
+                value={realLifeScale}
+                onChange={(value) => setRealLifeScale(value)}
+              />
+            </div>
+          )}
           <label>
             <input
               type="checkbox"
@@ -124,9 +152,18 @@ export default function ImageGallery() {
             />
             <small>Everything Else</small>
           </label>
+          {/* Toggle for Real-Life Size View */}
+          <label>
+            <input
+              type="checkbox"
+              checked={realLifeSizeView}
+              onChange={(e) => setRealLifeSizeView(e.target.checked)}
+            />
+            <small>Real Life Size View</small>
+          </label>
         </div>
 
-        {/* Color Filter Toggle, Color Picker and Tolerance Slider */}
+        {/* Color Filter Controls */}
         <div
           className="color-picker-container"
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -144,7 +181,6 @@ export default function ImageGallery() {
           {applyColorFilter && (
             <>
               <div
-                className="color-picker-input"
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
               >
                 <label htmlFor="colorPicker">
@@ -166,7 +202,6 @@ export default function ImageGallery() {
                 />
               </div>
               <div
-                className="tolerance-slider-container"
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
               >
                 <label htmlFor="toleranceSlider">
@@ -188,57 +223,98 @@ export default function ImageGallery() {
         </div>
       </div>
 
-      {/* Debug Section: Displaying the full query URL */}
+      {/* Debug Info */}
       <div className="debug" style={{ margin: "1rem 0", color: "white" }}>
         <small>API Query: {apiUrl}</small>
       </div>
-
-      {/* Debug text showing the number of images found */}
       <small style={{ color: "white" }}>{images.length} images found</small>
 
       {/* Image Gallery */}
-      <div
-        className="gallery"
-        style={{
-          gridTemplateColumns: `repeat(auto-fill, minmax(${imageSize}px, 1fr))`,
-        }}
-      >
-        {images.length === 0 ? (
-          <p>No images found in this time range.</p>
-        ) : (
-          images.map((img) => (
-            <div
-              key={img.id}
-              className="image-container"
-              style={{
-                "--img-size": `${imageSize}px`, // For layout purposes
-                "--img-num": imageSize, // Unitless numeric value for scaling calculations
-              }}
-            >
-              {img.image_url ? (
-                <img
-                  src={encodeURI(img.image_url)}
-                  alt={img.title}
-                  className="gallery-image"
-                  style={{
-                    width: `${imageSize}px`,
-                    height: `${imageSize}px`,
-                    objectFit: "cover",
-                  }}
-                />
-              ) : (
-                <p>⚠️ Image Not Found</p>
-              )}
-              <div className="image-info">
-                <p>{img.title.replace(/-/g, " ")}</p>
-                <p>
-                  {img.date}, {img.dimension}
-                </p>
+      {realLifeSizeView ? (
+        // Real-Life Size View: Use a flex container with wrapping for a free-flowing layout.
+        // Filter out images whose dimension is "na".
+        <div
+          className="gallery real-life"
+          style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}
+        >
+          {images.filter((img) => img.dimension.toLowerCase() !== "na")
+            .length === 0 ? (
+            <p>No images found in this time range.</p>
+          ) : (
+            images
+              .filter((img) => img.dimension.toLowerCase() !== "na")
+              .map((img) => {
+                const computedWidth = getDimensionInPixels(img.dimension);
+                return (
+                  <div
+                    key={img.id}
+                    className="image-container"
+                    style={{
+                      width: `${computedWidth}px`,
+                      "--img-size": `${computedWidth}px`,
+                      "--img-num": computedWidth,
+                    }}
+                  >
+                    {img.image_url ? (
+                      <img
+                        src={encodeURI(img.image_url)}
+                        alt={img.title}
+                        className="gallery-image"
+                      />
+                    ) : (
+                      <p>⚠️ Image Not Found</p>
+                    )}
+                    <div className="image-info">
+                      <p>{img.title.replace(/-/g, " ")}</p>
+                      <p>
+                        {img.date}, {img.dimension}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+          )}
+        </div>
+      ) : (
+        // Grid View: Uniform size images based on the grid size slider.
+        <div
+          className="gallery"
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${imageSize}px, 1fr))`,
+          }}
+        >
+          {images.length === 0 ? (
+            <p>No images found in this time range.</p>
+          ) : (
+            images.map((img) => (
+              <div
+                key={img.id}
+                className="image-container"
+                style={{
+                  "--img-size": `${imageSize}px`,
+                  "--img-num": imageSize,
+                }}
+              >
+                {img.image_url ? (
+                  <img
+                    src={encodeURI(img.image_url)}
+                    alt={img.title}
+                    className="gallery-image"
+                  />
+                ) : (
+                  <p>⚠️ Image Not Found</p>
+                )}
+                <div className="image-info">
+                  <p>{img.title.replace(/-/g, " ")}</p>
+                  <p>
+                    {img.date}, {img.dimension.toLowerCase()}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

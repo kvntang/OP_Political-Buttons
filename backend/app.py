@@ -100,6 +100,17 @@ def get_images(
             query += " AND type = ?"
             params.append(type)
 
+    # Append an ORDER BY clause to sort by the numeric dimension (small to big).
+    # This removes the "cm" suffix and casts the remainder as a REAL.
+    # Images without a valid "cm" dimension (e.g., "na") are sorted as if they had a very large value.
+    query += """
+        ORDER BY 
+        CASE 
+            WHEN dimension LIKE '%cm' THEN CAST(REPLACE(dimension, 'cm', '') AS REAL)
+            ELSE 999999
+        END ASC
+    """
+
     cursor.execute(query, params)
     images = cursor.fetchall()
     conn.close()
@@ -113,7 +124,6 @@ def get_images(
         dimension_val = img["dimension"] if img["dimension"] is not None else "na"
         filename = f"{title_val}_{date_val}_{type_val}_{dimension_val}.jpg".replace(" ", "-")
         image_path = os.path.join(IMAGE_FOLDER, filename)
-
 
         if os.path.exists(image_path):
             image_url = f"http://127.0.0.1:8000/image/{filename}"
