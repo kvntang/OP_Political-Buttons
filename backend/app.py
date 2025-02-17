@@ -4,6 +4,7 @@ import sqlite3
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI()
 
 app.add_middleware(
@@ -18,7 +19,7 @@ app.add_middleware(
 IMAGE_FOLDER = os.path.abspath("archive/")  # Change "images/" to "archive/"
 
 def get_db_connection():
-    conn = sqlite3.connect("images.db")
+    conn = sqlite3.connect("images2.db")
     conn.row_factory = sqlite3.Row  # Allows dict-like row access
     return conn
 
@@ -57,6 +58,9 @@ def hex_to_hsl(hex_str: str):
     # Convert hue to degrees (0-360)
     return (h * 360, s, l)
 
+##############################################################################################################################
+##############################################################################################################################
+
 @app.get("/images")
 def get_images(
     min_date: int = Query(None, description="Minimum date (e.g., 1940)"),
@@ -67,7 +71,8 @@ def get_images(
         description="Filter by image type. Use 'political-campaigns' to show only political campaigns, 'other' to show everything else."
     ),
     color: str = Query(None, description="Selected color in hex (e.g., #ff0000) for hue filtering"),
-    hue_tolerance: float = Query(10.0, description="Hue tolerance in degrees")
+    hue_tolerance: float = Query(10.0, description="Hue tolerance in degrees"),
+    keyword: str = Query(None, description="Search keyword for OCR text")
 ):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -99,6 +104,11 @@ def get_images(
         else:
             query += " AND type = ?"
             params.append(type)
+
+    # Keyword filtering (search in OCR text)
+    if keyword:
+        query += " AND title LIKE ?"
+        params.append(f"%{keyword}%")
 
     # Append an ORDER BY clause to sort by the numeric dimension (small to big).
     # This removes the "cm" suffix and casts the remainder as a REAL.
@@ -137,8 +147,10 @@ def get_images(
             "type": img["type"],
             "dimension": dimension_val,
             "color": img["color"],
-            "image_url": image_url
+            "image_url": image_url,
+            "ocr_text": img["ocr_text"]  # <-- Added OCR text here!
         })
+
 
     # Hue filtering: if a color is provided, filter images by comparing hue difference.
     if color:
@@ -166,6 +178,9 @@ def get_images(
 
     return image_list
 
+##############################################################################################################################
+##############################################################################################################################
+
 @app.get("/image/{filename}")
 def get_image(filename: str):
     image_path = os.path.join(IMAGE_FOLDER, filename)
@@ -173,3 +188,40 @@ def get_image(filename: str):
         return FileResponse(image_path)
     else:
         return {"error": "Image not found"}
+
+##############################################################################################################################
+##############################################################################################################################
+
+# @app.get("/suggestions")
+# def get_suggestions(q: str = Query(..., description="Partial search term for suggestions")):
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT ocr_text FROM images WHERE ocr_text IS NOT NULL")
+#     texts = cursor.fetchall()
+#     suggestions = set()
+
+#     for row in texts:
+#         text = row["ocr_text"]
+#         if text:
+#             for word in text.split():
+#                 # Check if the word starts with the query (case insensitive)
+#                 if word.lower().startswith(q.lower()):
+#                     suggestions.add(word)
+#     conn.close()
+#     # Return up to 10 suggestions
+#     return sorted(list(suggestions))[:10]
+
+@app.get("/suggestions")
+def get_suggestions(q: str = Query(..., description="Partial search term for suggestions")):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT title FROM images WHERE title IS NOT NULL")
+    rows = cursor.fetchall()
+    suggestions = []
+    for row in rows:
+        title = row["title"]
+        if title.lower().startswith(q.lower()):
+            suggestions.append(title)
+    conn.close()
+    return sorted(suggestions)[:10]
+

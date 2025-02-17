@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 from sklearn.cluster import KMeans
 import sqlite3
+import pytesseract
+
 
 # Function to extract dominant color
 def extract_dominant_color(image_path, k=1):
@@ -23,8 +25,14 @@ def extract_dominant_color(image_path, k=1):
 def clean_value(value):
     return None if value.lower() == "na" else value
 
+def extract_text(image_path):
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    text = pytesseract.image_to_string(gray)
+    return text.strip()
+
 # Connect to the database
-conn = sqlite3.connect("images.db")
+conn = sqlite3.connect("images2.db")
 cursor = conn.cursor()
 
 # Folder containing images
@@ -47,12 +55,15 @@ for filename in os.listdir(image_folder):
         img_type = clean_value(parts[2])
         dimension = clean_value(parts[3])
         color = extract_dominant_color(img_path)
+        ocr_text = extract_text(img_path)  # OCR extraction
 
         # Insert into database (NULL stored if value is None)
-        cursor.execute("INSERT INTO images (title, date, type, dimension, color) VALUES (?, ?, ?, ?, ?)",
-                       (title, date, img_type, dimension, color))
+        cursor.execute(
+            "INSERT INTO images (title, date, type, dimension, color, ocr_text) VALUES (?, ?, ?, ?, ?, ?)",
+            (title, date, img_type, dimension, color, ocr_text)
+        )
 
-        print(f"✅ Added: {title} | Date: {date} | Type: {img_type} | Dimension: {dimension} | Color: {color}")
+        print(f"✅ Added: {title} | Date: {date} | Type: {img_type} | Dimension: {dimension} | Color: {color} | OCR: {ocr_text}")
 
 # Commit changes
 conn.commit()

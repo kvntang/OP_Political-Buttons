@@ -22,19 +22,21 @@ export default function ImageGallery() {
   // Toggle for applying the date (timeline) filter
   const [applyDateFilter, setApplyDateFilter] = useState(true);
 
-  // Toggle for Real-Life Size View
+  // Real-Life Size View toggle and scale factor
   const [realLifeSizeView, setRealLifeSizeView] = useState(false);
-
-  // Scale factor for Real-Life Size View (pixels per cm)
   const [realLifeScale, setRealLifeScale] = useState(100);
 
-  // Fetch images from the backend
+  // **New states for keyword search:**
+  const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+
+  // Fetch images from the backend //////////////////////////////////////////////////////
   const fetchImages = async () => {
     try {
       // Construct URL with date filter toggle and date range
       let url = `http://127.0.0.1:8000/images?apply_date=${applyDateFilter}&min_date=${yearRange[0]}&max_date=${yearRange[1]}`;
 
-      // Determine the type filter:
+      // Type filtering
       if (!(showPolitical && showOther)) {
         if (showPolitical && !showOther) {
           url += "&type=political-campaigns";
@@ -43,11 +45,16 @@ export default function ImageGallery() {
         }
       }
 
-      // Append color filter if enabled and a color is selected.
+      // Append color filter if enabled
       if (applyColorFilter && selectedColor) {
         url += `&color=${encodeURIComponent(
           selectedColor
         )}&hue_tolerance=${tolerance}`;
+      }
+
+      // Append keyword filter if provided
+      if (searchTerm) {
+        url += `&keyword=${encodeURIComponent(searchTerm)}`;
       }
 
       setApiUrl(url); // For debugging purposes
@@ -69,6 +76,7 @@ export default function ImageGallery() {
     selectedColor,
     tolerance,
     applyDateFilter,
+    searchTerm,
   ]);
 
   // Utility to extract the numeric value from a dimension string (e.g., "2.3cm")
@@ -79,11 +87,30 @@ export default function ImageGallery() {
     return isNaN(num) ? imageSize : num * realLifeScale;
   };
 
+  // Handler to fetch suggestions as the user types
+  const handleSearchChange = async (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    if (value.length > 0) {
+      try {
+        const response = await axios.get(
+          `http://127.0.0.1:8000/suggestions?q=${value}`
+        );
+        setSuggestions(response.data);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setSuggestions([]);
+    }
+  };
+
   return (
     <div>
       {/* Filters Section */}
       <div className="filters">
-        {/* Year Range Filter */}
+        {/* 1. Year Range Filter */}
         <div className="year-filter">
           <p>
             from {yearRange[0]} to {yearRange[1]}
@@ -108,7 +135,52 @@ export default function ImageGallery() {
           </label>
         </div>
 
-        {/* Checkboxes and Sliders */}
+        {/* 2. Keyword Search */}
+        <div
+          className="keyword-search"
+          style={{ position: "relative", marginBottom: "1rem" }}
+        >
+          <input
+            type="text"
+            placeholder="Search images..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+            style={{ padding: "0.5rem", width: "200px" }}
+          />
+
+          {suggestions.length > 0 && (
+            <ul
+              className="suggestions"
+              style={{
+                position: "absolute",
+                top: "2.5rem",
+                left: 0,
+                backgroundColor: "#fff",
+                listStyle: "none",
+                padding: "0.5rem",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                width: "200px",
+                zIndex: 100,
+              }}
+            >
+              {suggestions.map((sugg, index) => (
+                <li
+                  key={index}
+                  onClick={() => {
+                    setSearchTerm(sugg);
+                    setSuggestions([]);
+                  }}
+                  style={{ cursor: "pointer", padding: "0.25rem 0" }}
+                >
+                  {sugg}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* 3. Checkboxes and Sliders */}
         <div className="checkbox-filters">
           {/* Show grid size slider when NOT in Real-Life Size View */}
           {!realLifeSizeView && (
@@ -163,7 +235,7 @@ export default function ImageGallery() {
           </label>
         </div>
 
-        {/* Color Filter Controls */}
+        {/* 4. Color Filter Controls */}
         <div
           className="color-picker-container"
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -260,6 +332,7 @@ export default function ImageGallery() {
                         src={encodeURI(img.image_url)}
                         alt={img.title}
                         className="gallery-image"
+                        title={img.title}
                       />
                     ) : (
                       <p>⚠️ Image Not Found</p>
@@ -269,6 +342,7 @@ export default function ImageGallery() {
                       <p>
                         {img.date}, {img.dimension}
                       </p>
+                      <p>{img.ocr_text}</p>
                     </div>
                   </div>
                 );
